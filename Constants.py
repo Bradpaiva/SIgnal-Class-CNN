@@ -1,17 +1,19 @@
 #constants
 
-TotalTime = 2
+class constant:
+	def __init__(self):
+		self.TotalTime = 2
 
-CarrierFreqMin = 500
+		self.CarrierFreqMin = 500
 
-CarrierFreqMax = 1500
+		self.CarrierFreqMax = 1500
 
-SamplingFrequency = 1000
+		self.SamplingFrequency = 1000
 
-BinaryFrequency = 100 #SamplingFrequency/BinaryFrequency must be int
+		self.BinaryFrequency = 100 #SamplingFrequency/BinaryFrequency must be int
 
-Fdev = 50   #frequency deviation, make higher than bitrate
+		self.Fdev = 50   #frequency deviation, make higher than bitrate
 
-NoiseRatio = .1
+		self.NoiseRatio = .1
 
-samples = 100
+		self.samples = 100
