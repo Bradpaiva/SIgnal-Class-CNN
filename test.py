@@ -1,28 +1,24 @@
-from tkinter import *
+import numpy as np
+from ssqueezepy import cwt
+from ssqueezepy.visuals import plot, imshow
 
-# --- functions ---
+#%%# Helper fn + params #####################################################
+def exp_am(t, offset):
+    return np.exp(-pi*((t - offset) / .1)**10)
 
-def on_click():
-    # change image on canvas
-    canvas.itemconfig(image_id, image=image2)
+pi = np.pi
+v1, v2, v3 = 64, 128, 32
 
-# --- main ---
+#%%# Make `x` & plot #########################################################
+t = np.linspace(0, 1, 2048, 1)
+x = (np.sin(2*pi * v1 * t) * exp_am(t, .2) +
+     (np.sin(2*pi * v1 * t) + 2*np.cos(2*pi * v2 * t)) * exp_am(t, .5)  + 
+     (2*np.sin(2*pi * v2 * t) - np.cos(2*pi * v3 * t)) * exp_am(t, .8))
+plot(x, title="x(t) | t=[0, ..., 1], %s samples" % len(x), show=1)
 
-root = Tk()
+#%%# Take CWT & plot #########################################################
+Wx, scales = cwt(x, 'morlet')
+imshow(Wx, yticks=scales, abs=1,
+       title="abs(CWT) | Morlet wavelet",
+       ylabel="scales", xlabel="samples")
 
-# canvas for image
-canvas = Canvas(root, width=60, height=60)
-canvas.pack()
-
-# button to change image
-button = Button(root, text="Change", command=on_click)
-button.pack()
-
-# images
-image1 = PhotoImage(file="/Users/bradpaiva/Documents/Python/CNN/tmp/image.jpg")
-image2 = PhotoImage(file="/Users/bradpaiva/Documents/Python/CNN/tmp/image2.jpg")
-
-# set first image on canvas
-image_id = canvas.create_image(0, 0, anchor='nw', image=image1)
-
-root.mainloop()

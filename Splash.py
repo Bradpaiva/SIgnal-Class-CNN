@@ -1,6 +1,7 @@
 from SignalGen import *
-from SignalRCNN import *
+# from SignalRCNN import *
 from SignalCNN import *
+from SignalNN import *
 from SpecDatasetFolders import *
 from tkinter import *
 from tkinter.ttk import *
@@ -25,6 +26,27 @@ master.geometry(str(Width)+"x"+str(Height))
 # function to display the total subject
 # credits total credits and SGPA according
 # to grades entered
+def roundHZ(value):
+	if value>100:
+		value=round(value,-1)
+	if value>1000:
+		value=round(value,-2)
+	if value>10000:
+		value=round(value,-3)
+	if value>100000:
+		value=round(value,-4)
+	if value>1000000:
+		value=round(value,-5)
+	return value
+
+def displayHZ(value):
+	if (value>=1000000):
+		return (str(value/1000000)+"MHz")
+	if (value>=1000):
+		return (str(value/1000)+"kHz")
+	else:
+		return (str(value)+"Hz")
+
 def display():
 	print("CNN")
 
@@ -32,38 +54,79 @@ def Exit():
 	master.destroy()
 	return
 
-def NoiseSet():
-	selection = "Value = " + str(round(noiseratio.get(),3))
+def NoiseSet(value):
+	value = (float(value))
+	selection = "Value = " + str(round(value,3))
 	label2.config(text = selection)
-	c.NoiseRatio=round(noiseratio.get(),3)
+	c.NoiseRatio=round(value,3)
+	noiseratio.set(value)
 
-def FminSet():
-	if Fmin.get()<c.SamplingFrequency*2:
-		value = Fmin.get()
-	else:
-		value = c.SamplingFrequency*2
-	selection = "Value = " + str(value)+ "hz"
+def FminSet(value):
+	value = int(float(value))
+	value = roundHZ(value)
+	if(value>c.CarrierFreqMax):
+		FmaxSet(value)
+	hertz=displayHZ(value)
+	selection = "Value = " + str(hertz)
 	label4.config(text = selection)
 	c.CarrierFreqMin=value
+	Fmin.set(value)
 
-def FmaxSet():
-	selection = "Value = " + str(int(Fmax.get()))+ "hz"
+def FmaxSet(value):
+	value = int(float(value))
+	value= roundHZ(value)
+	if value*2>c.SamplingFrequency:
+		#value = c.SamplingFrequency/2
+		SampFset(value*2)
+	if(value<c.CarrierFreqMin):
+		# value=c.CarrierFreqMin
+		FminSet(value)
+	hertz=displayHZ(value)
+	selection = "Value = " + str(hertz)
 	label6.config(text = selection)
-	c.CarrierFreqMax=int(Fmax.get())
+	c.CarrierFreqMax=int(value)
+	Fmax.set(value)
 
-def totaltset():
-	selection = "Value = " + str(int(totalt.get())) +"s"
+def totaltset(value):
+	value = int(float(value))
+	selection = "Value = " + str(value) +"s"
 	label8.config(text = selection)
-	c.TotalTime=int(totalt.get())
+	c.TotalTime=int(value)
+	totalt.set(value)
 
-def SampFset():
-	if SampF.get()-SampF.get()%c.BinaryFrequency >c.BinaryFrequency:
-		value = SampF.get()-SampF.get()%c.BinaryFrequency
+def SampFset(value):
+	value = int(float(value))
+	if value-value%c.BinaryFrequency >c.BinaryFrequency:
+		value = value-value%c.BinaryFrequency
 	else:
 		value = c.BinaryFrequency
-	selection = "Value = " + str(value) + "hz"
+	if (c.CarrierFreqMax*2>value):
+		FmaxSet(value/2)
+	hertz=displayHZ(value)
+	selection = "Value = " + str(hertz)
 	label10.config(text = selection)
 	c.SamplingFrequency=value
+	SampF.set(value)
+
+def BinFset(value):
+	value = int(float(value))
+	if(value>c.SamplingFrequency):
+		value=c.SamplingFrequency
+	while (c.SamplingFrequency/value%1>0):
+		value=value-1
+	hertz=displayHZ(value)
+	selection = "Value = " + str(hertz)
+	label12.config(text = selection)
+	c.BinaryFrequency=value
+	BinF.set(value)
+
+def reset():
+	FminSet(500)
+	FmaxSet(1500)
+	NoiseSet(.15)
+	totaltset(2)
+	SampFset(3000)
+	BinFset(100)
 
 
 
@@ -232,7 +295,7 @@ button1=Button(master, text="Test Signal Generator", style='W.TButton', command=
 button1.grid(row=12, column=0,sticky="nsew")
 
 button1=Button(master, text="Exit", style='W.TButton', command=Exit)
-button1.grid(row=50, column=0,sticky="nsew")
+button1.grid(row=80, column=0,sticky="nsew")
 
 # 
 # 
@@ -240,16 +303,19 @@ sliderstart = 20
 spacing = 3
 noiseratio = DoubleVar()
 
+
+reset = Button(master, text="reset", command=reset)
+reset.grid(row=sliderstart, column=2)
+
+
 label1 = Label(master, text="NoiseRatio")
 label1.grid(row=sliderstart, column=0)
-scale1 = Scale(master, from_=0, to=1,variable = noiseratio ,orient=HORIZONTAL)
+scale1 = Scale(master, from_=0, to=1,variable = noiseratio ,orient=HORIZONTAL, command= NoiseSet)
 scale1.grid(row=sliderstart+spacing, column=0)
-button2 = Button(master, text="Set Value", command=NoiseSet)
-button2.grid(row=sliderstart, column=2)
 label2 = Label(master)
 label2.grid(row=sliderstart+spacing, column=2)
 noiseratio.set(.15)
-selection = "Value = " + str(int(noiseratio.get()))
+selection = "Value = " + str((noiseratio.get()))
 label2.config(text = selection)
 
 
@@ -257,10 +323,8 @@ Fmin = IntVar()
 
 label3 = Label(master, text="Minimum Frequency")
 label3.grid(row=sliderstart+2*spacing, column=0)
-scale2 = Scale(master, from_=50, to=1000,variable = Fmin,orient=HORIZONTAL)
+scale2 = Scale(master, from_=50, to=50000000,variable = Fmin,orient=HORIZONTAL, command=FminSet)
 scale2.grid(row=sliderstart+3*spacing, column=0)
-button3 = Button(master, text="Set Value", command=FminSet)
-button3.grid(row=sliderstart+2*spacing, column=2)
 label4 = Label(master)
 label4.grid(row=sliderstart+3*spacing, column=2)
 Fmin.set(500)
@@ -271,10 +335,8 @@ Fmax = DoubleVar()
 
 label5 = Label(master, text="Maximum Frequency")
 label5.grid(row=sliderstart+4*spacing, column=0)
-scale3 = Scale(master, from_=1000, to=3000,variable = Fmax,orient=HORIZONTAL)
+scale3 = Scale(master, from_=50, to=50000000,variable = Fmax,orient=HORIZONTAL, command=FmaxSet)
 scale3.grid(row=sliderstart+5*spacing, column=0)
-button4 = Button(master, text="Set Value", command=FmaxSet)
-button4.grid(row=sliderstart+4*spacing, column=2)
 label6 = Label(master)
 label6.grid(row=sliderstart+5*spacing, column=2)
 Fmax.set(1500)
@@ -286,10 +348,8 @@ totalt = DoubleVar()
 
 label7 = Label(master, text="Total Time")
 label7.grid(row=sliderstart+6*spacing, column=0)
-scale4 = Scale(master, from_=1, to=30,variable = totalt,orient=HORIZONTAL)
+scale4 = Scale(master, from_=1, to=30,variable = totalt,orient=HORIZONTAL, command=totaltset)
 scale4.grid(row=sliderstart+7*spacing, column=0)
-button5 = Button(master, text="Set Value", command=totaltset)
-button5.grid(row=sliderstart+6*spacing, column=2)
 label8 = Label(master)
 label8.grid(row=sliderstart+7*spacing, column=2)
 totalt.set(2)
@@ -300,16 +360,25 @@ SampF = IntVar()
 
 label9 = Label(master, text="Sampling Frequency")
 label9.grid(row=sliderstart+8*spacing, column=0)
-scale5 = Scale(master, from_=10, to=10000,variable = SampF,orient=HORIZONTAL)
+scale5 = Scale(master, from_=1000, to=100000000,variable = SampF,orient=HORIZONTAL, command = SampFset)
 scale5.grid(row=sliderstart+9*spacing, column=0)
-button6 = Button(master, text="Set Value", command=SampFset)
-button6.grid(row=sliderstart+8*spacing, column=2)
 label10 = Label(master)
 label10.grid(row=sliderstart+9*spacing, column=2)
-SampF.set(1000)
+SampF.set(3000)
 selection = "Value = " + str(int(SampF.get()))+"hz"
 label10.config(text = selection)
 
+BinF = IntVar()
+
+label11 = Label(master, text="Binary Frequency")
+label11.grid(row=sliderstart+10*spacing, column=0)
+scale6 = Scale(master, from_=1, to=10000,variable = BinF,orient=HORIZONTAL, command = BinFset)
+scale6.grid(row=sliderstart+11*spacing, column=0)
+label12 = Label(master)
+label12.grid(row=sliderstart+11*spacing, column=2)
+BinF.set(100)
+selection = "Value = " + str(int(BinF.get()))+"hz"
+label12.config(text = selection)
 
 
 master.mainloop()

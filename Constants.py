@@ -8,7 +8,7 @@ class constant:
 
 		self.CarrierFreqMax = 1500
 
-		self.SamplingFrequency = 1000
+		self.SamplingFrequency = 3000
 
 		self.BinaryFrequency = 100 #SamplingFrequency/BinaryFrequency must be int
 

@@ -1,5 +1,6 @@
 # from SignalGen import *
 # from DatasetMaker import DatasetGen
+import glob
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -7,64 +8,72 @@ import matplotlib.pyplot as plot
 from tensorflow import keras
 from scipy import signal
 from scipy.fft import fftshift
+from PIL import Image
+import numpy as np
+from matplotlib import cm
+from tqdm import tqdm
+import os as os
 
-
-img_height = 640
-img_width = 480
+img_height = 480
+img_width = 640
 batchsize = 100
 epochs = 3
-steps_per_epoch=10
+steps_per_epoch= 500
+samples= 7000
 
-def RunCNN():
+left = 0
+width = 40
+right = left+ 40
 
-  ds_train = keras.preprocessing.image_dataset_from_directory(
-    '/Users/bradpaiva/Documents/Python/CNN/Samples',
-    labels = 'inferred',
-    label_mode = "int",
-    color_mode = 'rgb',
-    batch_size = batchsize,
-    image_size = (img_height,img_width),
-    shuffle = True,
-    seed = 123,
-    validation_split = 0.1,
-    subset = "training",
-    )
+images = []
+for f in tqdm(glob.iglob("./Samples/*/*")):
+    images.append(np.asarray(Image.open(f)))
+images = np.array(images)
 
-  ds_validation = keras.preprocessing.image_dataset_from_directory(
-    '/Users/bradpaiva/Documents/Python/CNN/Samples',
-    labels = 'inferred',
-    label_mode = "int",
-    color_mode = 'rgb',
-    batch_size = batchsize,
-    image_size = (img_height,img_width),
-    shuffle = True,
-    seed = 123,
-    validation_split = 0.1,
-    subset = "validation",
-    )
+classes=glob.glob("./Samples/*", recursive = True)
+print(classes)
+
+labels =[]
+for i in range(len(classes)):
+  labels = labels+[i]*int(samples/len(classes))
+labels=np.array(labels)
+print(labels)
+
+region_data = []
+for i in tqdm(range(samples)):
+    pic = images[i].astype("uint8")
+    im=Image.fromarray(pic)
+    im1 = im.crop((left, 0, right, img_height))
+    region_data.append(np.asarray(im1))
+region_data=np.array(region_data)
+
+ds_Region = tf.data.Dataset.from_tensor_slices((region_data, labels))
+SHUFFLE_BUFFER_SIZE = 100
+
+ds_Region = ds_Region.shuffle(SHUFFLE_BUFFER_SIZE).batch(batchsize)
 
 
+model = keras.Sequential([
+  layers.Input((img_height,width,3)),
+  layers.Conv2D(16, 3, padding = 'same'),
+  layers.Conv2D(32, 3, padding = 'same'),
+  layers.MaxPooling2D(),
+  layers.Flatten(),
+  layers.Dense(10),
+])
 
-  model = keras.Sequential([
-    layers.Input((640,480,3)),
-  	layers.Conv2D(16, 3, padding = 'same'),
-  	layers.Conv2D(32, 3, padding = 'same'),
-  	layers.MaxPooling2D(),
-  	layers.Flatten(),
-  	layers.Dense(10),
-  ])
+model.compile(optimizer='adam', 
+              loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
 
-  model.compile(optimizer='adam', 
-                loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True),
-                metrics=['accuracy'])
-   
-  history = model.fit(
-      ds_train.repeat(), 
-      epochs=epochs, 
-      steps_per_epoch=steps_per_epoch,
-      validation_data= ds_validation.repeat(), 
-      validation_steps=2
-  )
+history = model.fit(
+    ds_Region.repeat(), 
+    epochs=epochs, 
+    steps_per_epoch=steps_per_epoch,
+    validation_data= ds_Region.repeat(), 
+    validation_steps=2
+)
 
-  predictions = model.predict(val_dataset)
-  print(predictions)
+predictions = model.predict(val_dataset)
+print(predictions)
+
